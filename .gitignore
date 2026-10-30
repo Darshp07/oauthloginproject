@@ -1,0 +1,44 @@
+google-oauth-login/target/
+google-oauth-login/hs_err_pid*.log
+# RSA private key file
+*.p12
+
+# Java
+target/
+*.class
+
+# IDE
+.classpath
+.project
+.settings/
+.idea/
+.vscode/
+
+# Secrets
+.env
+*.p12
+
+# Logs
+*.log
+
+# Maven
+target/
+
+# Java
+*.class
+*.log
+hs_err_pid*
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IntelliJ / VS Code
+.idea/
+.vscode/
+
+# Secrets
+.env
+*.p12
+git rm --cached google-oauth-login/.factorypath
