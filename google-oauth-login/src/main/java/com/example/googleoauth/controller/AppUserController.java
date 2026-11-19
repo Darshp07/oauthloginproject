@@ -1,11 +1,32 @@
+
 package com.example.googleoauth.controller;
 
 import java.util.List;
+import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.googleoauth.dto.GoogleDriveFileResponse;
+import com.example.googleoauth.Service.GoogleDriveService;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import com.example.googleoauth.Service.GoogleDriveService;
+import com.example.googleoauth.dto.GoogleDriveFileResponse;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +40,6 @@ import com.example.googleoauth.Utility.ApiResponse;
 import com.example.googleoauth.Utility.ResponseBuilder;
 import com.example.googleoauth.dto.AppUserResponse;
 import com.example.googleoauth.entity.AccountStatus;
-import com.google.api.client.auth.oauth2.TokenResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,109 +47,244 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth/appUsers")
-@CrossOrigin("*")
 @RequiredArgsConstructor
 @Tag(name = "User API")
 public class AppUserController {
 
-	private final AppUserService authService;
+    private final AppUserService authService;
+    private final GoogleDriveService googleDriveService;
 
-	
-	
-	@GetMapping("GetAllUsers")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<List<AppUserResponse>> getUsers(){
-		return authService.getUsers();
-	}
+    // ==========================================
+    // 1. Get All Users
+    // ==========================================
 
-	@GetMapping("/me")
-	public ApiResponse<AppUserResponse> getCurrentUser(
-			@AuthenticationPrincipal Jwt jwt) {
-		return authService.getUserByEmail(jwt.getSubject());
-	}
+    @GetMapping("/GetAllUsers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<AppUserResponse>> getUsers() {
 
-	@PutMapping("/{userId}/status")
-	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<AppUserResponse> updateAccountStatus(
-			@PathVariable Long userId,
-			@Valid @RequestBody AccountStatusRequest request,
-			@AuthenticationPrincipal Jwt jwt) {
-		return authService.updateAccountStatus(userId, request.status(), jwt.getSubject());
-	}
-	
-	
-	@PostMapping("/register")
-	public ApiResponse<String> register(@Valid @RequestBody RegisterRequest request) {
+        return authService.getUsers();
+    }
 
-		try {
-			return authService.registerLocalUser(request.name().trim(), request.email().trim(),
-					request.password());
+    // ==========================================
+    // 2. Get Logged-in User
+    // ==========================================
 
-		} catch (IllegalArgumentException e) {
-			return ResponseBuilder.error("Email is already registered");
-		}
-	}
-	
-	
-	
-	public record RegisterRequest(@NotBlank String name, @NotBlank @Email String email,
-			@NotBlank @Size(min = 8, max = 72) String password) {
-	}
+    @GetMapping("/me")
+    public ApiResponse<AppUserResponse> getCurrentUser(
+            Authentication authentication) {
 
-	public record GoogleLoginRequest(@NotBlank String credential) {
-	}
-	
-	public record UserLogInRequest(String userName, String passWord ) {
-		
-	}
-	
-	
-	public record RefreshTokenRequest(@NotBlank String refresh_token) {}
+        return authService.getUserByEmail(
+                authentication.getName()
+        );
+    }
 
-	public record AccountStatusRequest(@jakarta.validation.constraints.NotNull AccountStatus status) {}
+    // ==========================================
+    // 3. Update Account Status
+    // ==========================================
 
-	@PostMapping("/LogInUser")
-	public ApiResponse<TokenResponse> UserLogin(@Valid @RequestBody UserLogInRequest req) {
-		return authService.UserLogin(req);
-	}
+    @PutMapping("/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<AppUserResponse> updateAccountStatus(
+            @PathVariable Long userId,
+            @Valid @RequestBody AccountStatusRequest request,
+            Authentication authentication) {
 
-	@Operation(security = @SecurityRequirement(name = "oauth2"))
-	@GetMapping("/test")
-	public String test() {
-		return "OAuth token working!";
-	}
-	
-//	@PostMapping("/google")
-//	public ApiResponse<TokenResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
-//		try {
-//			GoogleIdToken.Payload payload = googleTokenService.verifyToken(request.credential());
-//
-//			if(payload==null) {
-//				return ResponseBuilder.error("Invalid Google ID Token");
-//			}
-//			String googleId = payload.getSubject();
-//			String email = payload.getEmail();
-//			String name = (String) payload.get("name");
-//
-//			if (email == null || !Boolean.TRUE.equals(payload.getEmailVerified())) {
-//				return ResponseBuilder.error("Google email is not verified");
-//			}
-//
-//			return authService.googleLogin(googleId, email, name);
-//
-//		} catch (Exception e) {
-//			return ResponseBuilder.error("Google login failed: " + e.getMessage());
-//		}
-//	}
+        return authService.updateAccountStatus(
+                userId,
+                request.status(),
+                authentication.getName()
+        );
+    }
 
-//	@PostMapping("/refresh")
-//	public ApiResponse<TokenResponse> refreshToken(
-//			@Valid @RequestBody RefreshTokenRequest request) {
-//		return authService.refreshToken(request);
-//	}
+    // ==========================================
+    // 4. Register Local User
+    // ==========================================
+
+    @PostMapping("/register")
+    public ApiResponse<String> register(
+            @Valid @RequestBody RegisterRequest request) {
+
+        try {
+
+            return authService.registerLocalUser(
+                    request.name().trim(),
+                    request.email().trim(),
+                    request.password()
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            return ResponseBuilder.error(
+                    "Email is already registered"
+            );
+        }
+    }
+ // ==========================================
+ // Google Drive - Get All Files
+ // ==========================================
+
+ @GetMapping("/drive/files")
+ public ApiResponse<List<GoogleDriveFileResponse>> getAllDriveFiles(
+
+         @RegisteredOAuth2AuthorizedClient("google")
+         OAuth2AuthorizedClient authorizedClient) {
+
+     try {
+
+         String accessToken = authorizedClient
+                 .getAccessToken()
+                 .getTokenValue();
+
+         List<GoogleDriveFileResponse> files =
+                 googleDriveService.getAllFiles(accessToken);
+
+         return ResponseBuilder.success(files);
+
+     } catch (Exception e) {
+
+         return ResponseBuilder.error(
+                 "Unable to fetch Google Drive files: "
+                 + e.getMessage()
+         );
+     }
+ }
+ 
+
+//==========================================
+//Upload File to Google Drive
+//==========================================
+
+@PostMapping(
+  value = "/drive/upload",
+  consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+)
+public ApiResponse<GoogleDriveFileResponse> uploadDriveFile(
+
+      @RegisteredOAuth2AuthorizedClient("google")
+      OAuth2AuthorizedClient authorizedClient,
+
+      @RequestParam("file") MultipartFile file) {
+
+  try {
+
+      String accessToken = authorizedClient
+              .getAccessToken()
+              .getTokenValue();
+
+      GoogleDriveFileResponse uploadedFile =
+              googleDriveService.uploadFile(accessToken, file);
+
+      return ResponseBuilder.success(uploadedFile);
+
+  } catch (Exception e) {
+
+      return ResponseBuilder.error(
+              "Unable to upload Google Drive file: "
+              + e.getMessage()
+      );
+  }
+}
+
+@GetMapping("/drive/download/{fileId}")
+public ResponseEntity<?> downloadDriveFile(
+
+        @PathVariable String fileId,
+
+        @RegisteredOAuth2AuthorizedClient("google")
+        OAuth2AuthorizedClient authorizedClient) {
+
+    try {
+
+        String accessToken = authorizedClient
+                .getAccessToken()
+                .getTokenValue();
+
+        GoogleDriveService.DriveDownloadData downloadData =
+                googleDriveService.downloadFile(
+                        accessToken,
+                        fileId
+                );
+
+        String mimeType = downloadData.mimeType() != null
+                ? downloadData.mimeType()
+                : "application/octet-stream";
+
+        HttpHeaders headers = new HttpHeaders();
+
+        headers.setContentType(
+                MediaType.parseMediaType(mimeType)
+        );
+
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(
+                                downloadData.fileName(),
+                                StandardCharsets.UTF_8
+                        )
+                        .build()
+        );
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(
+                        new InputStreamResource(
+                                downloadData.inputStream()
+                        )
+                );
+
+    } catch (Exception e) {
+
+        return ResponseEntity
+                .internalServerError()
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(
+                        "Unable to download file: " + e.getMessage()
+                );
+    }
+}
+
+    // ==========================================
+    // 5. Test API
+    // ==========================================
+
+    @Operation(
+        security = @SecurityRequirement(name = "oauth2")
+    )
+    @GetMapping("/test")
+    public String test() {
+
+        return "OAuth token working!";
+    }
+
+    // ==========================================
+    // DTO Records
+    // ==========================================
+
+    public record RegisterRequest(
+
+            @NotBlank
+            String name,
+
+            @NotBlank
+            @Email
+            String email,
+
+            @NotBlank
+            @Size(min = 8, max = 72)
+            String password
+
+    ) {}
+
+    public record AccountStatusRequest(
+
+            @NotNull
+            AccountStatus status
+
+    ) {}
 }

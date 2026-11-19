@@ -1,0 +1,12 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            scope:
+              - openid
+              - profile
+              - email
+              - https://www.googleapis.com/auth/drive.file
+              - https://www.googleapis.com/auth/calendar.events

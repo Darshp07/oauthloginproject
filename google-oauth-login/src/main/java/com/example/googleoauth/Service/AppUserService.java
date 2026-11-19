@@ -1,14 +1,13 @@
 	package com.example.googleoauth.Service;
 
 import java.util.List;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,12 +17,11 @@ import com.example.googleoauth.Repository.AppUserRepository;
 import com.example.googleoauth.Repository.RoleRepository;
 import com.example.googleoauth.Utility.ApiResponse;
 import com.example.googleoauth.Utility.ResponseBuilder;
-import com.example.googleoauth.controller.AppUserController.RefreshTokenRequest;
-import com.example.googleoauth.controller.AppUserController.UserLogInRequest;
 import com.example.googleoauth.dto.AppUserResponse;
 import com.example.googleoauth.entity.AccountStatus;
 import com.example.googleoauth.entity.AppUser;
 import com.example.googleoauth.entity.Role;
+import com.google.api.client.auth.oauth2.RefreshTokenRequest;
 import com.google.api.client.auth.oauth2.TokenResponse;
 
 import jakarta.transaction.Transactional;
@@ -240,32 +238,32 @@ public AppUser findOrCreateGoogleUser(
 				.orElseThrow(() -> new IllegalStateException(
 						"ROLE_USER has not been initialized."));
 	}
-
-	public ApiResponse<TokenResponse> UserLogin(UserLogInRequest req) {
-		String normalizedEmail = req.userName() == null ? "" : req.userName().trim().toLowerCase(Locale.ROOT);
-		var userdata = userRepository.findByEmail(normalizedEmail);
-		UserDetails userDetails = userDetailsService.loadUserByUsername(normalizedEmail);
-		if (userDetails == null || userdata == null) {
-			return ResponseBuilder.DataNotFound();
-		}
-		if (!userdata.isEnabled() || !userdata.isAccountNonLocked()) {
-			return ResponseBuilder.error("This account is suspended.");
-		}
-		if (!passwordEncoder.matches(
-		        req.passWord(),
-		        userDetails.getPassword())) {
-			return ResponseBuilder.error("User Password is not valid..!!");
-		}
-		String token = jwtServices.buildToken(userdata);
-		String refeshTone= jwtServices.refreshToken(userdata);
-		TokenResponse response = new TokenResponse();
-		response.setAccessToken(token);
-		response.setRefreshToken(refeshTone);
-		return ResponseBuilder.success(response);
-	}
+//
+//	public ApiResponse<TokenResponse> UserLogin(UserLogInRequest req) {
+//		String normalizedEmail = req.userName() == null ? "" : req.userName().trim().toLowerCase(Locale.ROOT);
+//		var userdata = userRepository.findByEmail(normalizedEmail);
+//		UserDetails userDetails = userDetailsService.loadUserByUsername(normalizedEmail);
+//		if (userDetails == null || userdata == null) {
+//			return ResponseBuilder.DataNotFound();
+//		}
+//		if (!userdata.isEnabled() || !userdata.isAccountNonLocked()) {
+//			return ResponseBuilder.error("This account is suspended.");
+//		}
+//		if (!passwordEncoder.matches(
+//		        req.passWord(),
+//		        userDetails.getPassword())) {
+//			return ResponseBuilder.error("User Password is not valid..!!");
+//		}
+//		String token = jwtServices.buildToken(userdata);
+//		String refeshTone= jwtServices.refreshToken(userdata);
+//		TokenResponse response = new TokenResponse();
+//		response.setAccessToken(token);
+//		response.setRefreshToken(refeshTone);
+//		return ResponseBuilder.success(response);
+//	}
 
 	public ApiResponse<TokenResponse> refreshToken(RefreshTokenRequest request) {
-		 String refreshToken = request.refresh_token();
+		 String refreshToken = request.getRefreshToken();
 
 
 		    if (refreshToken == null || refreshToken.isBlank()) {
