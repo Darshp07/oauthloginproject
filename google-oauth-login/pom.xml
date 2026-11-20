@@ -77,6 +77,11 @@
     <artifactId>google-api-services-drive</artifactId>
     <version>v3-rev20261106-2.9.2</version>
 </dependency>
+<dependency>
+    <groupId>com.google.apis</groupId>
+    <artifactId>google-api-services-calendar</artifactId>
+    <version>v3-rev20250404-2.0.0</version>
+</dependency>
 		<!-- JWT JSON Processing -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>

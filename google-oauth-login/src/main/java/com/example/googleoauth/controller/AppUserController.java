@@ -1,45 +1,38 @@
 
 package com.example.googleoauth.controller;
 
-import java.util.List;
-import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.example.googleoauth.dto.GoogleDriveFileResponse;
-import com.example.googleoauth.Service.GoogleDriveService;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
-import com.example.googleoauth.Service.GoogleDriveService;
-import com.example.googleoauth.dto.GoogleDriveFileResponse;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.googleoauth.Service.AppUserService;
+import com.example.googleoauth.Service.GoogleCalendarService;
+import com.example.googleoauth.Service.GoogleDriveService;
 import com.example.googleoauth.Utility.ApiResponse;
 import com.example.googleoauth.Utility.ResponseBuilder;
 import com.example.googleoauth.dto.AppUserResponse;
+import com.example.googleoauth.dto.GoogleDriveFileResponse;
 import com.example.googleoauth.entity.AccountStatus;
+import com.google.api.services.calendar.model.Event;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -59,7 +52,7 @@ public class AppUserController {
 
     private final AppUserService authService;
     private final GoogleDriveService googleDriveService;
-
+    private  final GoogleCalendarService googleCalendarService;
     // ==========================================
     // 1. Get All Users
     // ==========================================
@@ -249,6 +242,118 @@ public ResponseEntity<?> downloadDriveFile(
     }
 }
 
+@DeleteMapping("/drive/delete/{fileId}")
+public ApiResponse<String> deleteDriveFile(
+        @PathVariable String fileId,
+        @RegisteredOAuth2AuthorizedClient("google")
+        OAuth2AuthorizedClient authorizedClient) {
+
+    try {
+        String accessToken = authorizedClient
+                .getAccessToken()
+                .getTokenValue();
+
+        googleDriveService.deleteFile(accessToken, fileId);
+
+        return ResponseBuilder.success("File deleted successfully.");
+
+    } catch (Exception e) {
+        return ResponseBuilder.error(
+                "Unable to delete file: " + e.getMessage()
+        );
+    }
+}
+
+//1. Create Calendar Event
+@PostMapping("/calendar/events")
+public ApiResponse<Event> createCalendarEvent(
+     @RegisteredOAuth2AuthorizedClient("google")
+     OAuth2AuthorizedClient authorizedClient,
+     @RequestBody Event event) {
+
+ try {
+     String accessToken = authorizedClient
+             .getAccessToken().getTokenValue();
+
+     Event createdEvent =
+             googleCalendarService.createEvent(accessToken, event);
+
+     return ResponseBuilder.success(createdEvent);
+
+ } catch (Exception e) {
+     return ResponseBuilder.error(
+             "Unable to create event: " + e.getMessage());
+ }
+}
+
+
+//2. Get All Calendar Events
+@GetMapping("/calendar/events")
+public ApiResponse<List<Event>> getCalendarEvents(
+     @RegisteredOAuth2AuthorizedClient("google")
+     OAuth2AuthorizedClient authorizedClient) {
+
+ try {
+     String accessToken = authorizedClient
+             .getAccessToken().getTokenValue();
+
+     List<Event> events =
+             googleCalendarService.getAllEvents(accessToken);
+
+     return ResponseBuilder.success(events);
+
+ } catch (Exception e) {
+     return ResponseBuilder.error(
+             "Unable to fetch events: " + e.getMessage());
+ }
+}
+
+
+//3. Update Calendar Event
+@PutMapping("/calendar/events/{eventId}")
+public ApiResponse<Event> updateCalendarEvent(
+     @PathVariable String eventId,
+     @RegisteredOAuth2AuthorizedClient("google")
+     OAuth2AuthorizedClient authorizedClient,
+     @RequestBody Event event) {
+
+ try {
+     String accessToken = authorizedClient
+             .getAccessToken().getTokenValue();
+
+     Event updatedEvent =
+             googleCalendarService.updateEvent(
+                     accessToken, eventId, event);
+
+     return ResponseBuilder.success(updatedEvent);
+
+ } catch (Exception e) {
+     return ResponseBuilder.error(
+             "Unable to update event: " + e.getMessage());
+ }
+}
+
+
+//4. Delete Calendar Event
+@DeleteMapping("/calendar/events/{eventId}")
+public ApiResponse<String> deleteCalendarEvent(
+     @PathVariable String eventId,
+     @RegisteredOAuth2AuthorizedClient("google")
+     OAuth2AuthorizedClient authorizedClient) {
+
+ try {
+     String accessToken = authorizedClient
+             .getAccessToken().getTokenValue();
+
+     googleCalendarService.deleteEvent(accessToken, eventId);
+
+     return ResponseBuilder.success("Event deleted successfully.");
+
+ } catch (Exception e) {
+     return ResponseBuilder.error(
+             "Unable to delete event: " + e.getMessage());
+ }
+}
     // ==========================================
     // 5. Test API
     // ==========================================

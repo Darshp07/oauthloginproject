@@ -227,4 +227,22 @@ public class GoogleDriveService {
             );
         }
     }
+    public void deleteFile(String accessToken, String fileId) throws IOException {
+        try {
+            if (fileId == null || fileId.isBlank()) {
+                throw new IllegalArgumentException("File ID is required.");
+            }
+
+            Drive driveService = getDriveService(accessToken);
+
+            driveService.files()
+                    .delete(fileId)
+                    .execute();
+
+        } catch (Exception e) {
+            throw new IOException(
+                    "Unable to delete Google Drive file: " + e.getMessage(), e
+            );
+        }
+    }
 }
